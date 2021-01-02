@@ -56,10 +56,6 @@ class AccountAccount(models.Model):
                 rec.currency_revaluation = True
 
     def _revaluation_query(self, revaluation_date):
-        tables, where_clause, where_clause_params = self.env[
-            "account.move.line"
-        ]._query_get()
-
         query = (
             """
 WITH amount AS (
@@ -111,9 +107,6 @@ SELECT
             + ", ".join(self._sql_mapping.values())
             + """
 FROM amount
-"""
-            + (("WHERE " + where_clause) if where_clause else "")
-            + """
 GROUP BY account_id, currency_id, partner_id
         """
         )
@@ -123,7 +116,6 @@ GROUP BY account_id, currency_id, partner_id
             revaluation_date,
             tuple(self.ids),
             revaluation_date,
-            *where_clause_params,
         ]
 
         return query, params
