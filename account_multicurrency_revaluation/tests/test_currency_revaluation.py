@@ -314,8 +314,8 @@ class TestCurrencyRevaluation(common.SavepointCase):
         invoice.post()
         invoice_move_line = next(
             move_line
-            for move_line in invoice.move_id.line_ids
-            if move_line.account_id == invoice.account_id
+            for move_line in invoice.line_ids
+            if move_line.account_id == self.receivable_acc
         )
         bank_stmt_line_2.process_reconciliation(
             counterpart_aml_dicts=[
@@ -358,10 +358,10 @@ class TestCurrencyRevaluation(common.SavepointCase):
         result = self.wizard_execute(self.today - timedelta(days=60))
         self.assertEqual(result.get("name"), "Created revaluation lines")
 
-        revaluation_line = (
-            self.env["account.move.line"].search([("account_id", "=", bank_account.id)])
-            - bank_account_lines
+        new_bank_account_lines = self.env["account.move.line"].search(
+            [("account_id", "=", bank_account.id)]
         )
+        revaluation_line = new_bank_account_lines - bank_account_lines
         self.assertEqual(len(revaluation_line), 1)
         self.assertEqual(revaluation_line.debit, 0.0)
         self.assertEqual(revaluation_line.credit, 48.33)
@@ -451,8 +451,8 @@ class TestCurrencyRevaluation(common.SavepointCase):
         invoice.post()
         invoice_move_line = next(
             move_line
-            for move_line in invoice.move_id.line_ids
-            if move_line.account_id == invoice.account_id
+            for move_line in invoice.line_ids
+            if move_line.account_id == self.receivable_acc
         )
         bank_stmt_line_2.process_reconciliation(
             counterpart_aml_dicts=[
@@ -602,8 +602,8 @@ class TestCurrencyRevaluation(common.SavepointCase):
         invoice.post()
         invoice_move_line = next(
             move_line
-            for move_line in invoice.move_id.line_ids
-            if move_line.account_id == invoice.account_id
+            for move_line in invoice.line_ids
+            if move_line.account_id == self.receivable_acc
         )
         bank_stmt_line_2.process_reconciliation(
             counterpart_aml_dicts=[
@@ -646,10 +646,10 @@ class TestCurrencyRevaluation(common.SavepointCase):
         result = self.wizard_execute(self.today - timedelta(days=60))
         self.assertEqual(result.get("name"), "Created revaluation lines")
 
-        revaluation_lines = (
-            self.env["account.move.line"].search([("account_id", "=", bank_account.id)])
-            - bank_account_lines
+        new_bank_account_lines = self.env["account.move.line"].search(
+            [("account_id", "=", bank_account.id)]
         )
+        revaluation_lines = new_bank_account_lines - bank_account_lines
         self.assertEqual(len(revaluation_lines), 2)
         self.assertEqual(sum(revaluation_lines.mapped("debit")), 48.33)
         self.assertEqual(sum(revaluation_lines.mapped("credit")), 48.33)

@@ -220,7 +220,6 @@ class WizardCurrencyRevaluation(models.TransientModel):
 
         return created_ids
 
-    @api.multi
     def _validate_company_revaluation_configuration(self, company):
         return (
             (
@@ -332,7 +331,25 @@ class WizardCurrencyRevaluation(models.TransientModel):
             self.journal_id.company_id.reversable_revaluations
             and self.revaluation_date < fields.Date.context_today(self)
         ):
-            self.env["account.move"]._run_reverses_entries()
+            reversing_moves = self.env["account.move"].search(
+                [
+                    ("journal_id", "in", self.mapped("journal_id.id")),
+                    ("state", "=", "posted"),
+                    ("revaluation_to_reverse", "=", True),
+                    ("reversed_entry_id", "=", False),
+                ],
+                limit=1,
+            )
+            if reversing_moves:
+                print('    reversing_moves', reversing_moves,
+                        [m.state for m in reversing_moves], sep='\n'+' '*8)
+            # Commented this line:
+            #   test_revaluation passed
+            #   test_revaluation_reverse failed
+            # Uncommented this line:
+            #   test_revaluation failed
+            #   test_revaluation_reverse passed
+            reversing_moves._reverse_moves()
 
         if created_ids:
             return {
