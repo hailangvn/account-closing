@@ -56,6 +56,22 @@ class AccountAccount(models.Model):
                 rec.currency_revaluation = True
 
     def _revaluation_query(self, revaluation_date):
+        tables, where_clause, where_clause_params = self.env[
+            "account.move.line"
+        ]._query_get()
+        mapping = [
+            ('"account_move_line".', "aml."),
+            ('"account_move_line"', "account_move_line aml"),
+            ('"account_move_line__move_id"', "am"),
+            ("LEFT JOIN", "\n    LEFT JOIN"),
+            (")) AND", "))\n" + " "*12 + "AND"),
+        ]
+        for s_from, s_to in mapping:
+            tables = tables.replace(s_from, s_to)
+            where_clause = where_clause.replace(s_from, s_to)
+        where_clause = ("\n" + " "*8 + "AND " + where_clause) if where_clause else ""
+        print('    tables, where_clause, where_clause_params', tables,
+            where_clause, where_clause_params, sep='\n'+' '*8)
         query = (
             """
 WITH amount AS (
@@ -65,11 +81,17 @@ WITH amount AS (
             THEN aml.partner_id
             ELSE NULL
         END AS partner_id,
+        amlcf.date amlcf_date,
+        amldf.date amldf_date,
+        aml.date aml_date,
+        aml.full_reconcile_id,
+        MAX(amldf.id) max_amldf_id,
+        MAX(amlcf.id) max_amlcf_id,
         aml.currency_id,
         aml.debit,
         aml.credit,
         aml.amount_currency
-    FROM account_move_line aml
+    FROM """ + tables + """
     INNER JOIN account_account acc ON aml.account_id = acc.id
     INNER JOIN account_account_type aat ON acc.user_type_id = aat.id
     LEFT JOIN account_partial_reconcile aprc
@@ -91,8 +113,13 @@ WITH amount AS (
     WHERE
         aml.account_id IN %s
         AND aml.date <= %s
-        AND aml.currency_id IS NOT NULL
+        AND aml.currency_id IS NOT NULL"""
+        + where_clause + """
     GROUP BY
+        amlcf.date,
+        amldf.date,
+        aml.date,
+        aml.full_reconcile_id,
         aat.type,
         aml.id
     HAVING
@@ -103,20 +130,36 @@ SELECT
     account_id as id,
     partner_id,
     currency_id,
+    amlcf_date,
+    amldf_date,
+    aml_date,
+    full_reconcile_id,
+    max_amldf_id,
+    max_amlcf_id,
 """
             + ", ".join(self._sql_mapping.values())
             + """
 FROM amount
-GROUP BY account_id, currency_id, partner_id
+GROUP BY account_id, currency_id, partner_id,
+    amlcf_date,
+    amldf_date,
+    aml_date,
+    full_reconcile_id,
+    max_amldf_id,
+    max_amlcf_id
         """
         )
 
+        print('    tuple(self.ids)', tuple(self.ids), sep='\n'+' '*8)
         params = [
             revaluation_date,
             revaluation_date,
             tuple(self.ids),
             revaluation_date,
+            *where_clause_params,
         ]
+        print('    query', query, sep='\n'+' '*8)
+        print('    params', params, sep='\n'+' '*8)
 
         return query, params
 
@@ -124,6 +167,7 @@ GROUP BY account_id, currency_id, partner_id
         query, params = self._revaluation_query(revaluation_date)
         self.env.cr.execute(query, params)
         lines = self.env.cr.dictfetchall()
+        print('    lines', *lines, sep='\n'+' '*8)
 
         data = {}
         for line in lines:

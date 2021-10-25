@@ -279,9 +279,18 @@ class WizardCurrencyRevaluation(models.TransientModel):
             )
 
         revaluations = account_ids.compute_revaluations(self.revaluation_date)
+        print('    revaluations', revaluations, sep='\n'+' '*8)
 
         for account_id, by_account in revaluations.items():
             account = Account.browse(account_id)
+            print('    account_id, by_account', account_id, by_account,
+                    sep='\n'+' '*8)
+            print('    account.internal_type', account.internal_type,
+                'account.currency_id', account.currency_id,
+                account.internal_type == "liquidity" and (
+                not account.currency_id
+                or account.currency_id == account.company_id.currency_id),
+                sep='\n'+' '*8)
             if account.internal_type == "liquidity" and (
                 not account.currency_id
                 or account.currency_id == account.company_id.currency_id
@@ -302,17 +311,28 @@ class WizardCurrencyRevaluation(models.TransientModel):
                     revaluations[account_id][partner_id][currency_id].update(
                         diff_balances
                     )
+                    print('    revaluations[account_id][partner_id][currency_id]',
+                        account_id, partner_id, currency_id,
+                        revaluations[account_id][partner_id][currency_id],
+                        sep='\n'+' '*8)
 
         # Create entries only after all computation have been done
         created_ids = []
         for account_id, by_account in revaluations.items():
+            print('    account, by_account', account, by_account,
+                    sep='\n'+' '*8)
             account = Account.browse(account_id)
 
             for partner_id, by_partner in by_account.items():
+                print('    partner_id, by_partner', partner_id, by_partner,
+                        sep='\n'+' '*8)
                 for currency_id, lines in by_partner.items():
+                    print('    currency, lines', currency, lines,
+                            sep='\n'+' '*8)
                     currency = Currency.browse(currency_id)
 
                     adj_balance = lines.get("unrealized_gain_loss", 0.0)
+                    print('    adj_balance', adj_balance, sep='\n'+' '*8)
                     if currency.is_zero(adj_balance):
                         continue
                     rate = lines.get("currency_rate", 0.0)
@@ -324,6 +344,7 @@ class WizardCurrencyRevaluation(models.TransientModel):
                         account, currency, partner_id, adj_balance, label, self, lines
                     )
                     created_ids.extend(new_ids)
+        print('    created_ids', created_ids, sep='\n'+' '*8)
 
         # In case revaluation date is before today, it's safe to run reversing
         # w/o waiting tomorrow, since otherwise it would cause confusion when

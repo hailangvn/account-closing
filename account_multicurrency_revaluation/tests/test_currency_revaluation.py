@@ -9,6 +9,7 @@ from odoo import exceptions, fields
 from odoo.tests import common
 
 
+@common.tagged("wip")
 class TestCurrencyRevaluation(common.SavepointCase):
     @classmethod
     def setUpClass(cls):
@@ -48,7 +49,7 @@ class TestCurrencyRevaluation(common.SavepointCase):
         cls.partner.property_account_payable_id = payable_acc.id
         cls.partner.property_account_receivable_id = cls.receivable_acc.id
 
-    def test_defaults(self):
+    def not_test_defaults(self):
         # TODO: This causes that the environment to be reset and screw up tests,
         # so disabled for now
         self.env["res.config.settings"].create(
@@ -68,7 +69,7 @@ class TestCurrencyRevaluation(common.SavepointCase):
         self.assertEqual(wizard.revaluation_date, fields.Date.today())
         self.assertEqual(wizard.journal_id, self.reval_journal)
 
-    def test_revaluation(self):
+    def not_test_revaluation(self):
         """Create Invoices and Run the revaluation currency wizard
         with different rates which result should be:
                                  Debit    Credit    Amount Currency
@@ -141,7 +142,7 @@ class TestCurrencyRevaluation(common.SavepointCase):
         self.assertEqual(sum(report.mapped("credit")), 40)
         self.assertEqual(sum(report.mapped("amount_currency")), 200)
 
-    def test_revaluation_payment(self):
+    def not_test_revaluation_payment(self):
         """Create an Invoice and execute the revaluation currency wizard with
         a rate of 0.75:
                                     Debit    Credit       Amount Currency
@@ -241,7 +242,7 @@ class TestCurrencyRevaluation(common.SavepointCase):
         )
         self.assertEqual(len(reval_move_lines), receivable_lines)
 
-    def test_revaluation_bank_account(self):
+    def not_test_revaluation_bank_account(self):
         self.delete_journal_data()
         usd_currency = self.env.ref("base.USD")
         eur_currency = self.env.ref("base.EUR")
@@ -434,6 +435,17 @@ class TestCurrencyRevaluation(common.SavepointCase):
                 "company_id": self.company.id,
             }
         )
+        account_ids = self.env["account.account"].search(
+            [
+                ("user_type_id.include_initial_balance", "=", "True"),
+                ("currency_revaluation", "=", True),
+                ("company_id", "=", self.company.id),
+            ]
+        )
+        print('    account_ids', account_ids, sep='\n'+' '*8)
+        self.revaluation_date = self.today - timedelta(days=60)
+        revaluations = account_ids.compute_revaluations(self.revaluation_date)
+        print('    initial revaluations', revaluations, sep='\n'+' '*8)
 
         bank_stmt = self.env["account.bank.statement"].create(
             {
@@ -461,6 +473,8 @@ class TestCurrencyRevaluation(common.SavepointCase):
                 }
             ]
         )
+        revaluations = account_ids.compute_revaluations(self.revaluation_date)
+        print('    first revaluations', revaluations, sep='\n'+' '*8)
 
         bank_stmt = self.env["account.bank.statement"].create(
             {
@@ -479,10 +493,14 @@ class TestCurrencyRevaluation(common.SavepointCase):
             }
         )
         bank_stmt.button_post()
+        revaluations = account_ids.compute_revaluations(self.revaluation_date)
+        print('    second revaluations', revaluations, sep='\n'+' '*8)
         invoice = self.create_invoice(
             self.today - timedelta(days=79), usd_currency, 1.0, 25.0
         )
         invoice.action_post()
+        revaluations = account_ids.compute_revaluations(self.revaluation_date)
+        print('    second revaluations after invoice.action_post', revaluations, sep='\n'+' '*8)
         invoice_move_line = next(
             move_line
             for move_line in invoice.line_ids
@@ -495,6 +513,8 @@ class TestCurrencyRevaluation(common.SavepointCase):
                 },
             ]
         )
+        revaluations = account_ids.compute_revaluations(self.revaluation_date)
+        print('    second revaluations after reconcile', revaluations, sep='\n'+' '*8)
 
         bank_stmt = self.env["account.bank.statement"].create(
             {
@@ -522,6 +542,8 @@ class TestCurrencyRevaluation(common.SavepointCase):
                 }
             ]
         )
+        revaluations = account_ids.compute_revaluations(self.revaluation_date)
+        print('    third revaluations after reconcile', revaluations, sep='\n'+' '*8)
 
         bank_stmt_line_4 = self.env["account.bank.statement.line"].create(
             {
@@ -543,6 +565,8 @@ class TestCurrencyRevaluation(common.SavepointCase):
                 }
             ]
         )
+        revaluations = account_ids.compute_revaluations(self.revaluation_date)
+        print('    fourth revaluations after reconcile', revaluations, sep='\n'+' '*8)
 
         bank_account_lines = self.env["account.move.line"].search(
             [("account_id", "=", bank_account.id)]
@@ -561,7 +585,7 @@ class TestCurrencyRevaluation(common.SavepointCase):
             ),
         )
 
-    def test_revaluation_reverse(self):
+    def not_test_revaluation_reverse(self):
         self.delete_journal_data()
         usd_currency = self.env.ref("base.USD")
         eur_currency = self.env.ref("base.EUR")
