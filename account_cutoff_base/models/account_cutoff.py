@@ -2,6 +2,7 @@
 # @author: Alexis de Lattre <alexis.delattre@akretion.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
+import json
 from collections import defaultdict
 
 from dateutil.relativedelta import relativedelta
@@ -192,7 +193,7 @@ class AccountCutoff(models.Model):
         same values for these fields will be merged.
         The list must at least contain account_id.
         """
-        return ["partner_id", "account_id", "analytic_account_id"]
+        return ["partner_id", "account_id", "analytic_distribution"]
 
     def _prepare_move(self, to_provision):
         self.ensure_one()
@@ -207,7 +208,12 @@ class AccountCutoff(models.Model):
                 "credit": amount >= 0 and amount or 0,
             }
             for k, v in zip(merge_keys, merge_values):
-                vals[k] = v
+                value = v
+                if k == "analytic_distribution" and isinstance(v, str):
+                    value = json.loads(value)
+
+                vals[k] = value
+
             movelines_to_create.append((0, 0, vals))
             amount_total += amount
 
@@ -221,7 +227,6 @@ class AccountCutoff(models.Model):
                     "account_id": self.cutoff_account_id.id,
                     "debit": counterpart_amount < 0 and counterpart_amount * -1 or 0,
                     "credit": counterpart_amount >= 0 and counterpart_amount or 0,
-                    "analytic_account_id": False,
                 },
             )
         )
@@ -248,7 +253,7 @@ class AccountCutoff(models.Model):
         return {
             "partner_id": self.move_partner and partner_id or False,
             "account_id": cutoff_line.cutoff_account_id.id,
-            "analytic_account_id": cutoff_line.analytic_account_id.id,
+            "analytic_distribution": cutoff_line.analytic_distribution,
             "amount": cutoff_line.cutoff_amount,
         }
 
@@ -260,7 +265,7 @@ class AccountCutoff(models.Model):
         return {
             "partner_id": False,
             "account_id": cutoff_tax_line.cutoff_account_id.id,
-            "analytic_account_id": cutoff_tax_line.analytic_account_id.id,
+            "analytic_distribution": cutoff_tax_line.analytic_distribution,
             "amount": cutoff_tax_line.cutoff_amount,
         }
 
@@ -273,7 +278,12 @@ class AccountCutoff(models.Model):
         to_provision = defaultdict(float)
         merge_keys = self._get_merge_keys()
         for provision_line in provision_lines:
-            key = tuple(provision_line.get(key) for key in merge_keys)
+            key = tuple(
+                isinstance(provision_line.get(key), dict)
+                and json.dumps(provision_line.get(key))
+                or provision_line.get(key)
+                for key in merge_keys
+            )
             to_provision[key] += provision_line["amount"]
         return to_provision
 
@@ -374,12 +384,16 @@ class AccountCutoff(models.Model):
             tax = ato.browse(tax_line["id"])
             if float_is_zero(tax_line["amount"], precision_rounding=cur_rprec):
                 continue
+
+            tax_accrual_account_id = False
+            tax_account_field_label = ""
             if self.cutoff_type == "accrued_expense":
                 tax_accrual_account_id = tax.account_accrued_expense_id.id
                 tax_account_field_label = _("Accrued Expense Tax Account")
             elif self.cutoff_type == "accrued_revenue":
                 tax_accrual_account_id = tax.account_accrued_revenue_id.id
                 tax_account_field_label = _("Accrued Revenue Tax Account")
+
             if not tax_accrual_account_id:
                 raise UserError(
                     _(

@@ -7,6 +7,7 @@ from odoo import fields, models
 
 class AccountCutoffTaxLine(models.Model):
     _name = "account.cutoff.tax.line"
+    _inherit = "analytic.mixin"
     _description = "Account Cut-off Tax Line"
 
     parent_id = fields.Many2one(
@@ -20,11 +21,6 @@ class AccountCutoffTaxLine(models.Model):
         "account.account",
         string="Cut-off Account",
         required=True,
-        readonly=True,
-    )
-    analytic_account_id = fields.Many2one(
-        "account.analytic.account",
-        string="Analytic Account",
         readonly=True,
     )
     base = fields.Monetary(

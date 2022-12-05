@@ -74,8 +74,16 @@
                             <field name="company_currency_id" invisible="1" />
                         </group>
                         <group name="accounting-params">
-                            <field name="cutoff_journal_id" required="1" />
-                            <field name="cutoff_account_id" required="1" />
+                            <field
+                                name="cutoff_journal_id"
+                                groups="base.group_multi_company"
+                                required="1"
+                            />
+                            <field
+                                name="cutoff_account_id"
+                                groups="base.group_multi_company"
+                                required="1"
+                            />
                             <field name="move_label" required="1" />
                             <field name="move_partner" />
                             <field name="move_id" />
@@ -85,6 +93,7 @@
                         <field
                             name="line_ids"
                             nolabel="1"
+                            colspan="2"
                             context="{'cutoff_type': cutoff_type}"
                         />
                     </group>
@@ -169,7 +178,8 @@
                     <field name="origin_move_date" />
                     <field name="account_id" />
                     <field
-                            name="analytic_account_id"
+                            name="analytic_distribution"
+                            widget="analytic_distribution"
                             groups="analytic.group_analytic_accounting"
                         />
                     <field name="amount" />
@@ -186,10 +196,10 @@
                     string="Cut-off Taxes Lines"
                     invisible="'accrued' not in context.get('cutoff_type', '-')"
                 >
-                    <field name="tax_line_ids" nolabel="1" />
+                <field name="tax_line_ids" nolabel="1" colspan="2" />
                 </group>
                 <group name="notes" string="Notes">
-                    <field name="notes" nolabel="1" />
+                    <field name="notes" nolabel="1" colspan="2" />
                 </group>
             </form>
         </field>
@@ -207,8 +217,9 @@
                 <field name="name" widget="text" optional="show" />
                 <field name="cutoff_account_code" string="Cutoff Account" />
                 <field
-                    name="analytic_account_id"
+                    name="analytic_distribution"
                     groups="analytic.group_analytic_accounting"
+                    widget="analytic_distribution"
                     optional="show"
                 />
                 <field name="quantity" optional="hide" />
@@ -228,17 +239,11 @@
             <search>
                 <field name="name" />
                 <field name="partner_id" />
-                <field name="analytic_account_id" />
                 <group name="groupby">
                     <filter
                         name="partner_groupby"
                         string="Partner"
                         context="{'group_by': 'partner_id'}"
-                    />
-                    <filter
-                        name="analytic_groupby"
-                        string="Analytic Account"
-                        context="{'group_by': 'analytic_account_id'}"
                     />
                 </group>
             </search>
@@ -264,7 +269,8 @@
                     <field name="sequence" />
                     <field name="cutoff_account_id" />
                     <field
-                        name="analytic_account_id"
+                        name="analytic_distribution"
+                        widget="analytic_distribution"
                         groups="analytic.group_analytic_accounting"
                     />
                     <field name="base" />
@@ -290,7 +296,8 @@
                 <field name="tax_id" />
                 <field name="cutoff_account_id" />
                 <field
-                    name="analytic_account_id"
+                    name="analytic_distribution"
+                    widget="analytic_distribution"
                     groups="analytic.group_analytic_accounting"
                 />
                 <field name="base" />
