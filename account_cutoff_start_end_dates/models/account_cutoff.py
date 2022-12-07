@@ -96,7 +96,7 @@ class AccountCutoff(models.Model):
             "end_date": aml.end_date,
             "account_id": aml.account_id.id,
             "cutoff_account_id": cutoff_account_id,
-            "analytic_account_id": aml.analytic_account_id.id or False,
+            "analytic_distribution": aml.analytic_distribution,
             "total_days": total_days,
             "amount": -aml.balance,
             "currency_id": self.company_currency_id.id,
@@ -180,7 +180,7 @@ class AccountCutoff(models.Model):
         mapping = self._get_mapping_dict()
         domain = [
             ("journal_id", "in", self.source_journal_ids.ids),
-            ("display_type", "=", False),
+            ("display_type", "not in", ("line_note", "line_section")),
             ("company_id", "=", self.company_id.id),
             ("balance", "!=", 0),
         ]

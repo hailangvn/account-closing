@@ -107,6 +107,7 @@
             <field name="cutoff_date" position="after">
                 <field
                     name="source_journal_ids"
+                    groups="base.group_multi_company"
                     widget="many2many_tags"
                     domain="[('company_id', '=', company_id)]"
                 />
@@ -156,7 +157,7 @@
         <field name="model">account.cutoff.line</field>
         <field name="inherit_id" ref="account_cutoff_base.account_cutoff_line_tree" />
         <field name="arch" type="xml">
-            <field name="analytic_account_id" position="after">
+            <field name="analytic_distribution" position="after">
                 <field name="start_date" optional="show" />
                 <field name="end_date" optional="show" />
                 <field name="total_days" optional="show" />
