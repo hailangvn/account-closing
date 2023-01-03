@@ -208,17 +208,3 @@ class AccountCutoff(models.Model):
         for aml in amls:
             line_obj.create(self._prepare_date_cutoff_line(aml, mapping))
         return res
-
-
-class AccountCutoffLine(models.Model):
-    _inherit = "account.cutoff.line"
-
-    start_date = fields.Date(readonly=True)
-    end_date = fields.Date(readonly=True)
-    total_days = fields.Integer(readonly=True)
-    cutoff_days = fields.Integer(
-        readonly=True,
-        help="In regular mode, this is the number of days after the "
-        "cut-off date. In forecast mode, this is the number of days "
-        "between the start date and the end date.",
-    )
